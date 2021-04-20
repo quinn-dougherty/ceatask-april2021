@@ -9,5 +9,9 @@
 - **Part of me wants to switch out `.to_string` for `__str__`, etc**, in general make the starter code more pythonic, but it's a low priority. I'm also tempted to run the Black autoformatter on this to make it easier to read, but I haven't yet. 
 
 
-## 
+## 16:49, 23 mintues to go
+
+- I ended up running the Black autoformatter
+- To be honest, this would run a lot better if the `@property` decorator was used liberally in the class. Running out of time to perform that refactor though given that the tests call those properties raising the "integer is not callable" error. 
+- I succeeded at the test cases in the structure-preserving `split_at` implementation **but only because the test cases were not exhaustive enough**. I'm going to dump the last 20 minutes into rebalancing tho, so that's as far as I get with it. 
 

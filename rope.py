@@ -39,18 +39,18 @@ class Rope:
 
     # How long the text stored is in all of the children combined
     # This is the same as this.to_string().length
-    def total_size(self):
+    def total_size(self) -> int:
         leftText = self.left.total_size() if self.left else 0
         rightText = self.right.total_size() if self.right else 0
         return leftText + len(self.text) + rightText
 
     # how deep the tree is (I.e. the maximum depth of children)
-    def depth(self):
+    def depth(self) -> int:
         return 1 + max(self.left_depth(), self.right_depth())
 
     # Whether the rope is balanced, i.e. whether any subtrees have branches
     # which differ by more than one in depth.
-    def is_balanced(self):
+    def is_balanced(self) -> bool:
         leftBalanced = self.left.is_balanced() if self.left else True
         rightBalanced = self.right.is_balanced() if self.right else True
 
@@ -60,12 +60,12 @@ class Rope:
             and abs(self.left_depth() - self.right_depth()) < 2
         )
 
-    def left_depth(self):
+    def left_depth(self) -> int:
         if not self.left:
             return 0
         return self.left.depth()
 
-    def right_depth(self):
+    def right_depth(self) -> int:
         if not self.right:
             return 0
         return self.right.depth()
@@ -147,7 +147,8 @@ def concat2(rope: Rope, other: Rope) -> Rope:
 # (E.g. you can choose to mutate the input rope or not)
 def split_at_naive(rope: Rope, position: int) -> Tuple[Rope, Rope]:
     """First iteration: kills structure of rope, always returns a 3-node rope.
-  """
+    see JOURNAL.md for discussion
+    """
     text = rope.to_string()
     length = rope.total_size()
     assert position <= length, "position requested is larger than total length of rope"
@@ -171,20 +172,69 @@ def insert_naive(rope: Rope, text: str, location: int) -> Rope:
 
 
 def split_at(rope: Rope, position: int) -> Tuple[Rope, Rope]:
-    # TODO
-    return new_left, right
+    """We need to descend into the tree comparing position to length.
 
+    PASSING TEST BUT THE TEST CASES ARE NOT THOROUGH ENOUGH.
+    I DO NOT IN THIS ITERATION HANDLE WHEN neither rope.left nor rope.right are None.
+    """
+
+    if rope.left is None:
+        if rope.right is None:
+            if position > rope.size:
+                raise ValueError(f"Rope {rope} is not big enough to split at {position}.")
+            return (Rope(rope.text[:position]), Rope(rope.text[position:]))
+        if position >= rope.total_size():
+            raise ValueError(f"Rope {rope} is not big enough to split at {position}.")
+        # rope.right is not None and rope.left is None
+        if position > rope.size:
+            return split_at(rope.right, position - rope.size)
+        return (Rope(rope.text[:position]), concat2(Rope(rope.text[position:]), rope.right))
+    # rope.left is not None
+    if rope.right is None:
+        if position >= rope.total_size():
+            raise ValueError(f"Rope {rope} is not big enough to split at {position}.")
+        if position >= rope.total_size() - rope.size:
+            # then then position is in the middle of rope.text
+            position -= rope.total_size() - rope.size
+            return (
+                concat2(rope.left, Rope(rope.text[:position])),
+                Rope(rope.text[position:])
+            )
+        # position < rope.total_size() - rope.size
+        return split_at(rope.left, position)
+    # neither rope.left nor rope.right are None
+    if position >= rope.total_size():
+        raise ValueError(f"Rope {rope} is not big enough to split at {position}.")
+    # ...
 
 def delete_range(rope: Rope, start: int, end: int) -> Rope:
-    pass
+    left, _ = split_at(rope, start)
+    _, right = split_at(rope, end)
+    return concat2(left, right)
 
 
 def insert(rope: Rope, text: str, location: int) -> Rope:
-    pass
+    left, right = split_at(rope, location)
+    new_rope = Rope(text)
+    new_rope.left = left
+    new_rope.right = right
+    return new_rope
 
 
 def rebalance(rope):
-    # TODO
+    if not rope:
+        return rope
+    while not rope.is_balanced():
+        right_depth = rope.right_depth()
+        left_depth = rope.left_depth()
+
+        if left_depth > right_depth:
+            rotate_right(rope)
+        elif left_depth < right_depth:
+            rotate_left(rope)
+        else:
+            rebalance(rope.left)
+            rebalance(rope.right)
     return rope
 
 
@@ -206,6 +256,7 @@ a
 
 
 def rotate_left(rope):
+    """This can break if rope.right is None"""
     newParent = rope.right
     newLeft = rope
     newLeft.right = newParent.left
@@ -232,6 +283,7 @@ def rotate_left(rope):
 
 
 def rotate_right(rope):
+    """This can break if rope.left is None"""
     newParent = rope.left
     newRight = rope
     newRight.left = newParent.right
