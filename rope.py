@@ -1,5 +1,5 @@
 from typing import Tuple, Callable
-
+from copy import deepcopy
 
 class Rope:
     def __init__(self, text):
@@ -50,14 +50,14 @@ class Rope:
 
     # Whether the rope is balanced, i.e. whether any subtrees have branches
     # which differ by more than one in depth.
-    def is_balanced(self) -> bool:
+    def is_balanced(self, epsilon: int = 2) -> bool:
         leftBalanced = self.left.is_balanced() if self.left else True
         rightBalanced = self.right.is_balanced() if self.right else True
 
         return (
             leftBalanced
             and rightBalanced
-            and abs(self.left_depth() - self.right_depth()) < 2
+            and abs(self.left_depth() - self.right_depth()) < epsilon
         )
 
     def left_depth(self) -> int:
@@ -222,19 +222,23 @@ def insert(rope: Rope, text: str, location: int) -> Rope:
 
 
 def rebalance(rope):
-    if not rope:
+    if rope is None:
         return rope
-    while not rope.is_balanced():
+    counter = 0
+    while not rope.is_balanced(epsilon=2):
         right_depth = rope.right_depth()
         left_depth = rope.left_depth()
 
+        if left_depth == right_depth:
+            rope.left = rebalance(rope.left)
+            rope.right = rebalance(rope.right)
         if left_depth > right_depth:
-            rotate_right(rope)
-        elif left_depth < right_depth:
-            rotate_left(rope)
-        else:
-            rebalance(rope.left)
-            rebalance(rope.right)
+            rope = rotate_right(rope)
+        if left_depth < right_depth:
+            rope = rotate_left(rope)
+        counter += 1
+        if counter > 2 ** 16:
+            return rope
     return rope
 
 
